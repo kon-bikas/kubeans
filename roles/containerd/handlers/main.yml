@@ -1,0 +1,8 @@
+---
+- name: Restarting containerd service unit
+  become: true
+  systemd_service:
+    name: containerd
+    state: started
+    enabled: true
+  listen: "restart containerd"

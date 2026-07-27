@@ -1,0 +1,14 @@
+---
+runtime_version: 2.3.3
+runtime_bin_dest: /usr/local
+
+runtime_cni_version: 1.9.1
+
+runc_version: 1.5.1
+
+crictl_version: 1.36.0
+
+debug_mode: true
+
+install_retries: 2
+install_delay: 1

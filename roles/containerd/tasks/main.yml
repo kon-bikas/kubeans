@@ -1,0 +1,143 @@
+---
+- name: Enable IPv4 forwarding
+  become: true
+  ansible.posix.sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    sysctl_set: true
+
+- name: Download containerd
+  get_url: 
+    url: "{{ runtime_url }}"
+    dest: /tmp
+    checksum: "{{ runtime_checksum }}"
+    mode: '0755'
+  register: url_result
+  until: url_result.status_code == 200
+  retries: "{{ install_retires | default(3) }}"
+  delay: "{{ install_delay | default(2) }}"
+
+- name: Display register result for containerd installment
+  debug:
+    var: url_results
+  when: debug_mode | default(false)
+
+- name: Unarchive the container runtime 
+  become: true
+  unarchive: 
+    remote_src: true
+    src: /tmp/containerd-2.3.3-linux-amd64.tar.gz
+    dest: "{{ runtime_bin_dest }}"
+    mode: '0755'
+  
+- name: Create systemd service file for containerd
+  become: true
+  template:
+    src: containerd.service.j2
+    dest: /etc/systemd/system/containerd.service
+    mode: "0644"
+  notify: "restart containerd"
+
+- name: Download runc
+  get_url: 
+    url: "{{ runc_url }}"
+    dest: /tmp
+    # checksum: "{{ runc_checksum }}"
+    mode: '0755'
+  register: url_result
+  # until: "url_result.stdout.find('runc.amd64: OK') != -1"
+  # retries: "{{ install_retries | default(3) }}"
+  # delay: "{{ install_delay | default(2) }}"
+
+- name: Display register result for runc installment 
+  debug:
+    var: url_result
+  when: debug_mode | default(false)
+
+- name: Move runc to location with correct mode
+  become: true
+  copy:
+    remote_src: true
+    src: /tmp/runc.amd64
+    dest: /usr/local/sbin/runc
+    mode: '0755'
+
+- name: Download containerd cni plugins
+  get_url: 
+    url: "{{ runtime_cni_url }}"
+    dest: /tmp
+    checksum: "{{ runtime_cni_checksum }}"
+    mode: '0755'
+  register: url_result
+  until: url_result.status_code == 200
+  retries: "{{ install_retires | default(3) }}"
+  delay: "{{ install_delay | default(2) }}"
+
+- name: Display register result for runc installment 
+  debug:
+    var: url_result
+  when: debug_mode | default(false)
+
+- name: Create containerd cni directory if not exists
+  become: true
+  file:
+    path: /opt/cni/bin
+    state: directory
+    recurse: true
+    mode: '0755'
+
+- name: Unarchive the containerd cni plugin 
+  become: true
+  unarchive: 
+    remote_src: true
+    src: /tmp/cni-plugins-linux-amd64-v1.9.1.tgz
+    dest: /opt/cni/bin
+    mode: '0755'
+
+- name: Generate containerd config file
+  command: containerd config default
+  register: containerd_config
+
+- name: Display register result for runc installment 
+  debug:
+    var: containerd_config
+  when: debug_mode | default(false)
+
+- name: Create containerd directory for config if not exists
+  become: true
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+
+- name: Copy containerd config content to location
+  become: true
+  copy:
+    content: "{{ containerd_config.stdout }}"
+    dest: /etc/containerd/config.toml
+    mode: '0755'
+
+- name: Make containerd use systemd cgroup driver with runc
+  become: true
+  replace:
+    path: /etc/containerd/config.toml
+    regexp: '^(\s*)SystemdCgroup = false'
+    replace: '\1SystemdCgroup = true'
+  notify: "restart containerd"
+
+- name: Install and setup crictl tool
+  include_tasks: "crictl.yml"
+
+  # this is for central task, for now here
+# - name: Create k8s admin group
+#   become: true
+#   group:
+#     name: k8s-admin
+
+# - name: Add user to k8s admin group
+#   become: true
+#   user:
+#     append: true
+#     groups:
+#       - k8s-admin
+#     name: "{{ ansible_user_id }}"

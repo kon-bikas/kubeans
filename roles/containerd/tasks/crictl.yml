@@ -1,0 +1,32 @@
+---
+- name: Download crictl
+  get_url: 
+    url: "{{ crictl_url }}"
+    dest: /tmp
+    checksum: "{{ crictl_checksum }}"
+    mode: '0755'
+  register: url_result
+  until: url_result.status_code == 200
+  retries: "{{ install_retires | default(3) }}"
+  delay: "{{ install_delay | default(2) }}"
+
+- name: Display register result for crictl installment
+  debug:
+    var: url_result
+  when: debug_mode | default(false)
+
+- name: Unarchive the crictl tool 
+  become: true
+  unarchive: 
+    remote_src: true
+    src: /tmp/crictl-v{{ crictl_version }}-linux-amd64.tar.gz
+    dest: "/usr/local/bin"
+    mode: '0755'
+
+# default configuration is deprecated so we need to provide it
+- name: Copy crictl config file to remote location
+  become: true
+  copy:
+    src: crictl.yml
+    dest: /etc/crictl.yaml
+    mode: '0755'

@@ -1,0 +1,12 @@
+---
+runtime_url: "https://github.com/containerd/containerd/releases/download/v{{ runtime_version }}/containerd-{{ runtime_version }}-linux-amd64.tar.gz"
+runtime_checksum: "sha256:{{ runtime_url }}.sha256sum"
+
+runtime_cni_url: "https://github.com/containernetworking/plugins/releases/download/v{{ runtime_cni_version }}/cni-plugins-linux-amd64-v{{ runtime_cni_version }}.tgz"
+runtime_cni_checksum: "sha256:{{ runtime_cni_url }}.sha256"
+
+runc_url: "https://github.com/opencontainers/runc/releases/download/v{{ runc_version }}/runc.amd64"
+runc_checksum: "https://github.com/opencontainers/runc/releases/download/v{{ runc_version }}/runc.sha256sum"
+
+crictl_url: "https://github.com/kubernetes-sigs/cri-tools/releases/download/v{{ crictl_version }}/crictl-v{{ crictl_version }}-linux-amd64.tar.gz"
+crictl_checksum: "sha256:{{ crictl_url }}.sha256"
