@@ -1,0 +1,14 @@
+---
+  - name: Create kubernetes Certified Authority
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      common_name: kubernetes-ca
+      cert_file_name: ca
+
+  - name: Create etcd Certified Authority
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki/etcd
+      common_name: etcd-ca
+      cert_file_name: ca

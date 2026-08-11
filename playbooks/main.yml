@@ -1,4 +1,10 @@
+# ---
+#   - hosts: all 
+#     roles:
+#       - ../roles/containerd
+
 ---
   - hosts: all 
     roles:
-      - ../roles/containerd
+      - ../k8s-roles/pki/generate_ca
+      - ../k8s-roles/pki/generate_crt

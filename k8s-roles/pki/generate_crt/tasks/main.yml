@@ -1,0 +1,133 @@
+---
+  - name: Create kubelet client certs
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: kubelet-client
+      common_name: "system:node:{{ inventory_hostname }}"
+      organization: system:nodes
+      server_certificate: false
+      
+  - name: Create kubelet server certs
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: kubelet-server
+      common_name: "{{ inventory_hostname }}"
+      alt_names: 'DNS:localhost,IP:172.31.45.251'
+      server_certificate: true
+
+
+  # - name: Create etcd client certs
+  #   include_tasks: "create.yml"
+  #   vars:
+  #     cert_directory: /etc/kubernetes/manifests/pki
+  #     ca_crt: /etc/kubernetes/manifests/pki/ca.crt
+  #     ca_key: /etc/kubernetes/manifests/pki/ca.key
+  #     cert_file_name: kubelet-client
+  #     common_name: "system:node:{{ inventory_hostname }}"
+  #     org_unit: system:nodes
+      
+  - name: Create etcd server certs
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki/etcd
+      ca_crt: /etc/kubernetes/pki/etcd/ca.crt
+      ca_key: /etc/kubernetes/pki/etcd/ca.key
+      cert_file_name: etcd-server
+      common_name: etcd-server
+      alt_names: 'DNS:localhost,IP:172.31.45.251'
+      server_certificate: true
+
+  - name: Create scheduler client certs
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: sheduler
+      common_name: system:kube-scheduler
+      server_certificate: false
+    
+
+  - name: Create controller manager client certs
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: controller
+      common_name: system:kube-controler-manager
+      server_certificate: false
+
+  - name: Create kube proxy client certs
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: kube-proxy
+      common_name: system:kube-proxy
+      server_certificate: false
+
+
+  - name: Create kube-apiserver server certs
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: apiserver
+      common_name: kube-apiserver
+      alt_names: 'DNS:localhost,IP:172.31.45.251'
+      server_certificate: true
+
+  - name: Create kube-apiserver kubelet client certs
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: apiserver-kubelet-client
+      common_name: kube-apiserver
+      server_certificate: false
+
+  - name: Create kube-apiserver etcd client certs
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki/etcd
+      ca_crt: /etc/kubernetes/pki/etcd/ca.crt
+      ca_key: /etc/kubernetes/pki/etcd/ca.key
+      cert_file_name: apiserver-etcd-client
+      common_name: kube-apiserver
+      server_certificate: false
+
+  - name: Create admin client cert
+    include_tasks: "create.yml"
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: admin
+      common_name: kube-admin
+      organization: system:masters
+      server_certificate: false
+
+
+
+  - name: Generate SA signing private key
+    become: true
+    community.crypto.openssl_privatekey:
+      path: /etc/kubernetes/pki/sa.key
+      size: 2048
+      type: RSA
+
+  - name: Extract SA public key
+    become: true
+    community.crypto.openssl_publickey:
+      path: /etc/kubernetes/pki/sa.pub
+      privatekey_path: /etc/kubernetes/pki/sa.key
