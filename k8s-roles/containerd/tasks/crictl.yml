@@ -10,11 +10,6 @@
   retries: "{{ install_retires | default(3) }}"
   delay: "{{ install_delay | default(2) }}"
 
-- name: Display register result for crictl installment
-  debug:
-    var: url_result
-  when: debug_mode | default(false)
-
 - name: Unarchive the crictl tool 
   become: true
   unarchive: 

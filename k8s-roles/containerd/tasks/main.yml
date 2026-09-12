@@ -17,11 +17,6 @@
   retries: "{{ install_retires | default(3) }}"
   delay: "{{ install_delay | default(2) }}"
 
-- name: Display register result for containerd installment
-  debug:
-    var: url_results
-  when: debug_mode | default(false)
-
 - name: Unarchive the container runtime 
   become: true
   unarchive: 
@@ -49,11 +44,6 @@
   # retries: "{{ install_retries | default(3) }}"
   # delay: "{{ install_delay | default(2) }}"
 
-- name: Display register result for runc installment 
-  debug:
-    var: url_result
-  when: debug_mode | default(false)
-
 - name: Move runc to location with correct mode
   become: true
   copy:
@@ -72,11 +62,6 @@
   until: url_result.status_code == 200
   retries: "{{ install_retires | default(3) }}"
   delay: "{{ install_delay | default(2) }}"
-
-- name: Display register result for runc installment 
-  debug:
-    var: url_result
-  when: debug_mode | default(false)
 
 - name: Create containerd cni directory if not exists
   become: true
@@ -97,11 +82,6 @@
 - name: Generate containerd config file
   command: containerd config default
   register: containerd_config
-
-- name: Display register result for runc installment 
-  debug:
-    var: containerd_config
-  when: debug_mode | default(false)
 
 - name: Create containerd directory for config if not exists
   become: true
@@ -125,19 +105,8 @@
     replace: '\1SystemdCgroup = true'
   notify: "restart containerd"
 
+- name: Run containerd service handler
+  meta: flush_handlers
+
 - name: Install and setup crictl tool
   include_tasks: "crictl.yml"
-
-  # this is for central task, for now here
-# - name: Create k8s admin group
-#   become: true
-#   group:
-#     name: k8s-admin
-
-# - name: Add user to k8s admin group
-#   become: true
-#   user:
-#     append: true
-#     groups:
-#       - k8s-admin
-#     name: "{{ ansible_user_id }}"
