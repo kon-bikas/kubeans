@@ -10,10 +10,10 @@ resource "aws_key_pair" "cluster_ssh_key" {
 resource "aws_instance" "control_plane_instance" {
   count = local.cp_node_count
 
-  ami                         = "ami-04df1508c6be5879e"
-  instance_type               = var.nodes_instance_type
-  key_name                    = var.cluster_ssh_key_name
-  subnet_id                   = aws_subnet.k8s-subnets[
+  ami           = "ami-04df1508c6be5879e"
+  instance_type = var.control_plane_instance_type
+  key_name      = var.cluster_ssh_key_name
+  subnet_id = aws_subnet.k8s-subnets[
     count.index % var.availability_zones_count
   ].id
   vpc_security_group_ids      = [aws_security_group.k8s_sg.id]
@@ -35,7 +35,7 @@ resource "aws_instance" "worker_instance" {
   count = var.node_count - local.cp_node_count
 
   ami           = "ami-04df1508c6be5879e"
-  instance_type = var.nodes_instance_type
+  instance_type = var.worker_instance_type
   key_name      = var.cluster_ssh_key_name
   subnet_id = aws_subnet.k8s-subnets[
     (count.index + local.cp_node_count) % var.availability_zones_count
