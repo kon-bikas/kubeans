@@ -2,7 +2,7 @@
 control_plane_nodes:
   hosts:
 %{ for i, cp_node_ip in control_plane_ips ~}
-    controlplane${i}:
+    ${control_plane_prefix}${i}:
       ansible_host: ${cp_node_ip}
       ansible_port: 22
       ansible_ssh_user: ${remote_user}
@@ -11,7 +11,7 @@ control_plane_nodes:
 worker_nodes:
   hosts:
 %{ for i, worker_ip in worker_nodes_ips ~}
-    workernode${i}:
+    ${worker_prefix}${i}:
       ansible_host: ${worker_ip}
       ansible_port: 22
       ansible_ssh_user: ${remote_user}
