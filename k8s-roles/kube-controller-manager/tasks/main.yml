@@ -1,0 +1,28 @@
+---
+  - name: Create controller manager client certs
+    include_role:
+      name: utils/pki/pki_crt
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: controller
+      common_name: system:kube-controller-manager
+      server_certificate: false
+
+  - name: Creating kubeconfig file for controller manager
+    include_role:
+      name: utils/kubeconfig
+    vars:
+      username: "system:kube-controller-manager"
+      key_path: /etc/kubernetes/pki/controller.key
+      crt_path: /etc/kubernetes/pki/controller.crt
+      ca_path: /etc/kubernetes/pki/ca.crt
+      kubeconfig_dest: /etc/kubernetes/controller-manager.conf
+  
+  - name: Add kube-controller-manager's pod manifest to static pod path
+    become: true
+    template:
+      src: kube-controller-manager.yml.j2
+      dest: /etc/kubernetes/manifests/kube-controller-manager.yml
+      mode: "0644"
