@@ -1,0 +1,39 @@
+---
+  - name: Create etcd Certified Authority
+    include_role:
+      name: utils/pki/pki_ca
+    vars:
+      cert_directory: /etc/kubernetes/pki/etcd
+      common_name: etcd-ca
+      cert_file_name: ca
+  
+  - name: Create etcd peer certs
+    include_role:
+      name: utils/pki/pki_crt
+    vars:
+      cert_directory: /etc/kubernetes/pki/etcd
+      ca_crt: /etc/kubernetes/pki/etcd/ca.crt
+      ca_key: /etc/kubernetes/pki/etcd/ca.key
+      cert_file_name: etcd-peer
+      common_name: etcd-peer
+      alt_names: "DNS:localhost,DNS:{{ inventory_hostname }}.{{ cluster_domain }}"
+      server_certificate: true
+      
+  - name: Create etcd server certs
+    include_role:
+      name: utils/pki/pki_crt
+    vars:
+      cert_directory: /etc/kubernetes/pki/etcd
+      ca_crt: /etc/kubernetes/pki/etcd/ca.crt
+      ca_key: /etc/kubernetes/pki/etcd/ca.key
+      cert_file_name: etcd-server
+      common_name: etcd-server
+      alt_names: "DNS:localhost,DNS:{{ inventory_hostname }}.{{ cluster_domain }}"
+      server_certificate: true
+
+  - name: Add kube-apiserver's pod manifest to static pod path
+    become: true
+    template:
+      src: etcd.yml.j2
+      dest: "{{ static_pod_dir }}/etcd.yml"
+      mode: "0644"
