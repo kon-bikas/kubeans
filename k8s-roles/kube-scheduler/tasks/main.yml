@@ -1,0 +1,28 @@
+---
+  - name: Create scheduler client certs
+    include_role:
+      name: utils/pki/pki_crt
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: scheduler
+      common_name: system:kube-scheduler
+      server_certificate: false
+
+  - name: Creating kubeconfig file for scheduler
+    include_role:
+      name: utils/kubeconfig
+    vars:
+      username: "system:kube-scheduler"
+      key_path: /etc/kubernetes/pki/scheduler.key
+      crt_path: /etc/kubernetes/pki/scheduler.crt
+      ca_path: /etc/kubernetes/pki/ca.crt
+      kubeconfig_dest: /etc/kubernetes/kube-scheduler.conf
+  
+  - name: Add kube-scheduler's pod manifest to static pod path
+    become: true
+    template:
+      src: kube-scheduler.yml.j2
+      dest: /etc/kubernetes/manifests/kube-scheduler.yml
+      mode: "0644"
