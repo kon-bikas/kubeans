@@ -1,0 +1,5 @@
+cluster_entry_domain_name: "api.cluster.internal"
+apiserver_port: 6443
+
+cluster_domain: "cluster.internal"
+cluster_public_entry_domain_name: "tf-lb-2cece7bb4004fbbcc4333d3b43-d9d4f35b9abb8110.elb.eu-west-3.amazonaws.com"
