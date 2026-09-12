@@ -1,0 +1,13 @@
+---
+  - name: Pass Flannel manifests to host
+    template:
+      src: flannel.yml.j2
+      dest: "{{ ansible_user_dir }}/flannel.yml"
+      mode: "0644"
+    run_once: true
+    delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+
+  - name: Apply Flannel manifest file
+    command: "kubectl apply -f {{ ansible_user_dir }}/flannel.yml"
+    run_once: true
+    delegate_to: "{{ groups['control_plane_nodes'][0] }}"

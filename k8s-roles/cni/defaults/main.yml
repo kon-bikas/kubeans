@@ -1,0 +1,5 @@
+---
+cluster_cidr: 10.22.0.0/16
+cni_flannel_version: 0.28.9
+
+cni_plugin: flannel
