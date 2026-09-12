@@ -1,10 +1,26 @@
-# ---
-#   - hosts: all 
-#     roles:
-#       - ../roles/containerd
-
 ---
-  - hosts: all 
+  - name: Setting up common cluster components
+    hosts: all 
     roles:
-      - ../k8s-roles/pki/generate_ca
-      - ../k8s-roles/pki/generate_crt
+      - ../k8s-roles/containerd
+      - ../k8s-roles/kubelet
+      - ../k8s-roles/utils/kubectl
+
+  - name: Setting up control plane components
+    hosts: control_plane_nodes 
+    roles:
+      - ../k8s-roles/etcd
+      - ../k8s-roles/kube-apiserver
+      - ../k8s-roles/kube-scheduler
+      - ../k8s-roles/kube-controller-manager
+
+  - name: Setting up kube-proxy to all nodes
+    hosts: all
+    roles:
+      - ../k8s-roles/kube-proxy
+      - ../k8s-roles/cni
+  
+  - name: Setting remaining controlplane components
+    hosts: control_plane_nodes
+    roles:
+      - ../k8s-roles/addons/coredns
