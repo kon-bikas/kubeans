@@ -1,0 +1,52 @@
+---
+- name: Install kubectl binary
+  become: true
+  get_url: 
+    url: "{{ kubectl_url }}"
+    dest: "{{ kubectl_bin_dir }}"
+    checksum: "{{ kubectl_checksum }}"
+    mode: '0755'
+  register: url_result
+  until: url_result.status_code == 200
+  retries: "{{ install_retires | default(3) }}"
+  delay: "{{ install_delay | default(2) }}"
+
+- name: Create admin client cert
+  include_role:
+    name: utils/pki/pki_crt
+  vars:
+    cert_directory: /etc/kubernetes/pki
+    ca_crt: /etc/kubernetes/pki/ca.crt
+    ca_key: /etc/kubernetes/pki/ca.key
+    cert_file_name: admin
+    common_name: kube-admin
+    organization: system:masters
+    server_certificate: false
+
+- name: Create .kube directory under user home dir
+  become: true
+  file:
+    path: "{{ ansible_user_dir }}/.kube"
+    state: directory
+    mode: '0755'
+
+- name: Generate admin client kubeconfig file for internal use
+  include_role:
+    name: utils/kubeconfig
+  vars:
+    username: admin
+    key_path: /etc/kubernetes/pki/admin.key
+    crt_path: /etc/kubernetes/pki/admin.crt
+    ca_path: /etc/kubernetes/pki/ca.crt
+    kubeconfig_dest: "{{ ansible_user_dir }}/.kube/config"
+
+- name: Generate admin client kubeconfig file for external use
+  include_role:
+    name: utils/kubeconfig
+  vars:
+    username: admin
+    key_path: /etc/kubernetes/pki/admin.key
+    crt_path: /etc/kubernetes/pki/admin.crt
+    ca_path: /etc/kubernetes/pki/ca.crt
+    cluster_entry_domain_name: "{{ cluster_public_entry_domain_name }}"
+    kubeconfig_dest: "{{ ansible_user_dir }}/.kube/externalconf"
