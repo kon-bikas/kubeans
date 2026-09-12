@@ -1,0 +1,15 @@
+---
+kubelet_version: 1.36.2
+
+kubelet_bin_dir: /usr/bin
+
+kubelet_config_path: /var/lib/kubelet/config.yml
+kubelet_kubeconfig_path: /etc/kubernetes/kubelet.conf
+
+ca_cert_path: /etc/kubernetes/pki/ca.crt
+static_pod_dir: /etc/kubernetes/manifests
+container_runtime_socket_path: unix:///run/containerd/containerd.sock
+coredns_ips: [ 172.20.0.10 ]
+
+kubelet_server_cert: /etc/kubernetes/pki/kubelet-server.crt
+kubelet_server_key: /etc/kubernetes/pki/kubelet-server.key

@@ -1,0 +1,87 @@
+---
+  - name: Install kubelet binary
+    become: true
+    get_url: 
+      url: "{{ kubelet_url }}"
+      dest: "{{ kubelet_bin_dir }}"
+      checksum: "{{ kubelet_checksum }}"
+      mode: '0755'
+    register: url_result
+    until: url_result.status_code == 200
+    retries: "{{ install_retires | default(3) }}"
+    delay: "{{ install_delay | default(2) }}"
+
+    # role includes run_once for preventing different CAs on each node
+  - name: Create kubernetes Certified Authority
+    include_role:
+      name: utils/pki/pki_ca
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      common_name: kubernetes-ca
+      cert_file_name: ca
+
+  - name: Create kubelet client certs
+    include_role:
+      name: utils/pki/pki_crt
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: kubelet-client
+      common_name: "system:node:{{ inventory_hostname }}"
+      organization: system:nodes
+      server_certificate: false
+      
+  - name: Create kubelet server certs
+    include_role:
+      name: utils/pki/pki_crt
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: kubelet-server
+      common_name: "{{ inventory_hostname }}"
+      alt_names: "DNS:localhost,DNS:{{ inventory_hostname }}.{{ cluster_domain }}"
+      server_certificate: true
+
+  - name: Creating kubeconfig file for kubelet
+    include_role:
+      name: utils/kubeconfig
+    vars:
+      username: "system:node:{{ inventory_hostname }}"
+      key_path: /etc/kubernetes/pki/kubelet-client.key
+      crt_path: /etc/kubernetes/pki/kubelet-client.crt
+      ca_path: /etc/kubernetes/pki/ca.crt
+      kubeconfig_dest: "{{ kubelet_kubeconfig_path }}"
+  
+  - name: Make sure kubelet directory under /var/lib exists
+    become: true
+    file:
+      path: /var/lib/kubelet
+      state: directory
+      mode: '0755'
+  
+  - name: Make sure kubelet static pods manifest directory exists
+    become: true
+    file:
+      path: "{{ static_pod_dir }}"
+      state: directory
+      mode: '0755'
+
+  - name: Generate kubelet configuration file
+    become: true
+    template:
+      src: config.yml.j2
+      dest: "{{ kubelet_config_path }}"
+      mode: "0644"
+
+  - name: Create systemd service unit for kubelet
+    become: true
+    template:
+      src: kubelet.service.j2
+      dest: /etc/systemd/system/kubelet.service
+      mode: "0644"
+    notify: "restart kubelet"
+
+  - name: Trigger kubelet service handler
+    meta: flush_handlers
