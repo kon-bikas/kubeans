@@ -1,0 +1,10 @@
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+kind: KubeProxyConfiguration
+bindAddress: 0.0.0.0
+bindAddressHardFail: false
+clientConnection:
+  kubeconfig: /etc/kubernetes/kube-proxy.conf
+clusterCIDR: 10.22.0.0/16
+mode: iptables
+metricsBindAddress: 127.0.0.1:10249
+healthzBindAddress: 127.0.0.1:10256
