@@ -1,0 +1,69 @@
+---
+- name: Set facts for easier path variables
+  set_fact:
+    key_path: "{{ cert_directory }}/{{ cert_file_name }}.key"
+    csr_path: "{{ cert_directory }}/{{ cert_file_name }}.csr"
+    crt_path: "{{ cert_directory }}/{{ cert_file_name }}.crt"
+
+- name: Make sure that pki directory exists
+  become: true
+  file:
+    path: "{{ cert_directory }}"
+    state: directory
+    mode: '0755'
+
+- name: Create Certified Authority (CA) key
+  become: true
+  community.crypto.openssl_privatekey:
+    path: "{{ key_path }}"
+    size: 2048
+  run_once: true
+  delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+
+- name: Generate an OpenSSL Certificate Signing Request
+  become: true
+  community.crypto.openssl_csr:
+    path: "{{ csr_path }}"
+    privatekey_path: "{{ key_path }}"
+    common_name: "{{ common_name }}"
+    basic_constraints:
+      - "CA:TRUE"
+    basic_constraints_critical: true
+    key_usage:
+      - keyCertSign
+      - cRLSign
+    key_usage_critical: true
+  run_once: true
+  delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+
+- name: Selfsign to create the CA certificate
+  become: true
+  community.crypto.x509_certificate:
+    path: "{{ crt_path }}"
+    csr_path: "{{ csr_path }}"
+    privatekey_path: "{{ key_path }}"
+    provider: selfsigned
+  run_once: true
+  delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+
+# now copy the contents to other hosts (except csr)
+- name: Get the contents of the CA (private key and certificate)
+  become: true
+  ansible.builtin.slurp:
+    src: "{{ item }}"
+  register: kubernetes_ca
+  run_once: true
+  delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+  loop:
+    - "{{ key_path }}"
+    - "{{ crt_path }}"
+
+- name: Copy CA private key to nodes
+  become: true
+  ansible.builtin.copy:
+    content: "{{ kubernetes_ca.results[item.index]['content'] | b64decode }}"
+    dest: "{{ item.path }}"
+  with_items: 
+    - { index: 0, path: "{{ key_path }}" }
+    - { index: 1, path: "{{ crt_path }}" }
+
