@@ -1,0 +1,91 @@
+---
+  - name: Create kube-apiserver server certs
+    include_role:
+      name: utils/pki/pki_crt
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: apiserver
+      common_name: kube-apiserver
+      alt_names: "DNS:localhost,DNS:api.cluster.internal,DNS:{{ ansible_hostname }}.{{ cluster_domain }},DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:kubernetes.default.svc.cluster.local,IP:172.20.0.1,IP:127.0.0.1"
+      server_certificate: true
+
+  - name: Create kube-apiserver kubelet client certs
+    include_role:
+      name: utils/pki/pki_crt
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: apiserver-kubelet-client
+      common_name: kube-apiserver
+      server_certificate: false
+
+  - name: Create kube-apiserver etcd client certs
+    include_role:
+      name: utils/pki/pki_crt
+    vars:
+      cert_directory: /etc/kubernetes/pki/etcd
+      ca_crt: /etc/kubernetes/pki/etcd/ca.crt
+      ca_key: /etc/kubernetes/pki/etcd/ca.key
+      cert_file_name: apiserver-etcd-client
+      common_name: kube-apiserver
+      server_certificate: false
+
+  - name: Generate SA signing private key
+    become: true
+    community.crypto.openssl_privatekey:
+      path: /etc/kubernetes/pki/sa.key
+      size: 2048
+      type: RSA
+    run_once: true
+    delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+
+  - name: Extract SA public key
+    become: true
+    community.crypto.openssl_publickey:
+      path: /etc/kubernetes/pki/sa.pub
+      privatekey_path: /etc/kubernetes/pki/sa.key
+    run_once: true
+    delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+
+  - name: Get the contents of the SA private and public key
+    become: true
+    ansible.builtin.slurp:
+      src: "/etc/kubernetes/pki/sa.{{ item }}"
+    register: kubernetes_sa_key
+    run_once: true
+    delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+    loop:
+      - "key"
+      - "pub"
+
+  - name: Copy CA private key to nodes
+    become: true
+    ansible.builtin.copy:
+      content: "{{ kubernetes_sa_key.results[item.index]['content'] | b64decode }}"
+      dest: "/etc/kubernetes/pki/sa.{{ item.path }}"
+    with_items: 
+      - { index: 0, path: "key" }
+      - { index: 1, path: "pub" }
+
+  - name: Add kube-apiserver's pod manifest to static pod path
+    become: true
+    template:
+      src: kube-apiserver.yml.j2
+      dest: "{{ static_pod_dir }}/kube-apiserver.yml"
+      mode: "0644"
+
+  - name: Pass kube-apiserver's ClusterRole manifest to hosts
+    copy:
+      src: apiserver-kubelet-roles.yml
+      dest: "{{ ansible_user_dir }}/apiserver-kubelet-cr.yml"
+      mode: 0644
+
+  - name: Apply ClusterRole to kube-apiserver for kubelet authorization
+    command: "kubectl apply -f {{ ansible_user_dir }}/apiserver-kubelet-cr.yml"
+    register: apply_result
+    until: apply_result is succeeded
+    retries: 7
+    delay: 10
