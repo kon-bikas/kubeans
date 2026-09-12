@@ -1,0 +1,23 @@
+---
+# stores file content in base64 already
+- name: Get the contents of the kubelet client crt and key
+  become: true
+  ansible.builtin.slurp:
+    src: "{{ item }}"
+  register: cert_content
+  loop:
+    - "{{ key_path }}"
+    - "{{ crt_path }}"
+
+- name: Get the contents of the Certified Authority
+  become: true
+  ansible.builtin.slurp:
+    src: "{{ ca_path }}"
+  register: ca_cert_content
+
+- name: Generate kubeconfig for given cert and key
+  become: true
+  template:
+    src: kubeconfig.conf.j2
+    dest: "{{ kubeconfig_dest }}"
+    mode: "0644"
