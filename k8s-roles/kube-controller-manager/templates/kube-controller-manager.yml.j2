@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-controller-manager
+  namespace: kube-system
+spec:
+  containers:
+    - name: kube-controller-manager
+      image: registry.k8s.io/kube-controller-manager:v1.36.0
+      command:
+        - kube-controller-manager
+        - --cluster-cidr=10.22.0.0/16
+        - --allocate-node-cidrs=true
+        - --cluster-name=kubernetes
+        - --authentication-kubeconfig=/etc/kubernetes/controller-manager.conf
+        - --authorization-kubeconfig=/etc/kubernetes/controller-manager.conf
+        - --bind-address=127.0.0.1
+        - --kubeconfig=/etc/kubernetes/controller-manager.conf
+        - --client-ca-file=/etc/kubernetes/pki/ca.crt
+        - --root-ca-file=/etc/kubernetes/pki/ca.crt
+        - --cluster-signing-cert-file=/etc/kubernetes/pki/ca.crt
+        - --cluster-signing-key-file=/etc/kubernetes/pki/ca.key
+        - --service-account-private-key-file=/etc/kubernetes/pki/sa.key
+        - --use-service-account-credentials=true
+        - --leader-elect=true
+        - --service-cluster-ip-range=172.20.0.0/16
+      livenessProbe:
+        httpGet:
+          path: /healthz
+          host: localhost
+          port: 10257
+          scheme: HTTPS
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        httpGet:
+          path: /healthz
+          host: localhost
+          port: 10257
+          scheme: HTTPS
+        periodSeconds: 5
+        timeoutSeconds: 15
+      startupProbe:
+        httpGet:
+          host: localhost
+          path: /healthz
+          port: 10257
+          scheme: HTTPS
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+      resources:
+        requests:
+          cpu: 200m
+      volumeMounts:
+        - name: controller-pki-vol
+          mountPath: /etc/kubernetes/pki
+        - name: controller-conf-vol
+          mountPath: /etc/kubernetes/controller-manager.conf
+  hostNetwork: true
+  priorityClassName: system-node-critical
+  volumes:
+    - name: controller-pki-vol
+      hostPath:
+        path: /etc/kubernetes/pki
+        type: DirectoryOrCreate
+    - name: controller-conf-vol
+      hostPath:
+        path: /etc/kubernetes/controller-manager.conf
+        type: FileOrCreate
+  
