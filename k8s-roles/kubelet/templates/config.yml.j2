@@ -1,0 +1,22 @@
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+authentication:
+  anonymous:
+    enabled: false
+  webhook:
+    cacheTTL: 0s # disabling token auth caching
+    enabled: true
+  x509:
+    clientCAFile: {{ ca_cert_path }}
+authorization:
+  mode: Webhook
+  webhook:
+    cacheAuthorizedTTL: 0s # disabling Authorization caching
+    cacheUnauthorizedTTL: 0s
+staticPodPath: {{ static_pod_dir }}
+clusterDomain: cluster.local
+containerRuntimeEndpoint: {{ container_runtime_socket_path }}
+cgroupDriver: systemd
+clusterDNS: {{ coredns_ips }} # ip of service (maths apiserver's svc ip option) forwarding to coreDNS pods
+tlsCertFile: {{ kubelet_server_cert }}
+tlsPrivateKeyFile: {{ kubelet_server_key }}
