@@ -1,0 +1,62 @@
+---
+  - name: Create kube-proxy directory under /var/lib
+    become: true
+    file:
+      path: /var/lib/kube-proxy
+      state: directory
+      mode: '0755'
+
+  - name: copy ClusterRoleBinding file to host
+    copy:
+      src: proxy-rb.yml
+      dest: "{{ ansible_user_dir }}/proxy-rb.yml"
+      mode: 0644
+    run_once: true
+    delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+  
+  - name: Apply kube-proxy ClusterRoleBinding resource
+    command: "kubectl apply -f {{ ansible_user_dir }}/proxy-rb.yml"
+    run_once: true
+    delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+
+  - name: Create kube-proxy client certs
+    include_role:
+      name: utils/pki/pki_crt
+    vars:
+      cert_directory: /etc/kubernetes/pki
+      ca_crt: /etc/kubernetes/pki/ca.crt
+      ca_key: /etc/kubernetes/pki/ca.key
+      cert_file_name: kube-proxy
+      common_name: system:kube-proxy
+      organization: system:kube-proxy
+      server_certificate: false
+
+  - name: Generate kube-proxy kubeconfig file
+    include_role:
+      name: utils/kubeconfig
+    vars:
+      username: "system:kube-proxy"
+      key_path: /etc/kubernetes/pki/kube-proxy.key
+      crt_path: /etc/kubernetes/pki/kube-proxy.crt
+      ca_path: /etc/kubernetes/pki/ca.crt
+      kubeconfig_dest: /etc/kubernetes/kube-proxy.conf
+  
+  - name: Pass kube proxy config file to kube-proxy dir under /var/lib
+    become: true
+    template:
+      src: config.conf.j2
+      dest: /var/lib/kube-proxy/config.conf
+  
+  - name: Pass kube-proxy DaemonSet manifest file
+    template:
+      src: kube-proxy-ds.yml.j2
+      dest: "{{ ansible_user_dir }}/proxy-ds.yml"
+      mode: 0644
+    run_once: true
+    delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+  
+  - name: Apply kube-proxy DaemonSet
+    command: "kubectl apply -f {{ ansible_user_dir }}/proxy-ds.yml"
+    run_once: true
+    delegate_to: "{{ groups['control_plane_nodes'][0] }}"
+  
