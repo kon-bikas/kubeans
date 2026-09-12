@@ -1,0 +1,8 @@
+---
+  - name: Restarting and enabling kubelet service
+    become: true
+    systemd_service:
+      name: kubelet
+      state: started
+      enabled: true
+    listen: "restart kubelet"
