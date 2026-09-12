@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd
+  namespace: kube-system
+  labels:
+    component: etcd
+spec:
+  containers:
+    - name: etcd
+      image: registry.k8s.io/etcd:3.7.1
+      command:
+        - etcd
+        - --name={{ inventory_hostname }}
+        - --data-dir=/var/lib/etcd
+        - --trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+        - --peer-trusted-ca-file=/etc/kubernetes/pki/etcd/ca.crt
+        - --cert-file=/etc/kubernetes/pki/etcd/etcd-server.crt
+        - --key-file=/etc/kubernetes/pki/etcd/etcd-server.key
+        - --peer-cert-file=/etc/kubernetes/pki/etcd/etcd-peer.crt
+        - --peer-key-file=/etc/kubernetes/pki/etcd/etcd-peer.key
+        - --listen-metrics-urls=http://localhost:2381
+        - --listen-client-urls=https://0.0.0.0:2379
+        - --listen-peer-urls=https://0.0.0.0:2380
+        - --advertise-client-urls=https://localhost:2379,https://{{ inventory_hostname }}.{{ cluster_domain }}:2379
+        - --initial-advertise-peer-urls=https://{{ inventory_hostname }}.{{ cluster_domain }}:2380
+        - --initial-cluster={% for host in groups['control_plane_nodes'] %}{{ host }}=https://{{ host }}.{{ cluster_domain }}:2380{% if not loop.last %},{% endif %}{% endfor %}
+        
+      ports:
+        - name: health-port
+          containerPort: 2381
+          protocol: TCP
+      livenessProbe:
+        httpGet:
+          path: /livez
+          host: localhost 
+          port: health-port
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+      readinessProbe:
+        httpGet:
+          path: /readyz
+          host: localhost
+          port: health-port
+          scheme: HTTP
+        periodSeconds: 5
+        timeoutSeconds: 15
+      startupProbe:
+        httpGet:
+          host: 127.0.0.1
+          path: /livez
+          port: health-port
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+      resources:
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      volumeMounts:
+        - name: etcd-data-vol
+          mountPath: /var/lib/etcd
+        - name: etcd-pki-vol
+          mountPath: /etc/kubernetes/pki/etcd
+  hostNetwork: true
+  priorityClassName: system-node-critical
+  volumes:
+    - name: etcd-data-vol
+      hostPath:
+        path: /var/lib/etcd
+        type: DirectoryOrCreate
+    - name: etcd-pki-vol
+      hostPath:
+        path: /etc/kubernetes/pki/etcd
+        type: DirectoryOrCreate
