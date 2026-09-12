@@ -22,3 +22,18 @@ output "control_plane_count" {
   description = "The best control plane count for given nodes number, considering etcd quorum"
   value       = floor(var.node_count / 2) + 1
 }
+
+output "control_plane_node_name_prefix" {
+  description = "Prefix for control plane hostname prefix"
+  value = var.control_plane_node_name_prefix
+}
+
+output "worker_node_name_prefix" {
+  description = "Prefix for control plane hostname prefix"
+  value = var.worker_node_name_prefix
+}
+
+output "public_lb_dns_name" {
+  description = "The domain name of the public nlb"
+  value       = aws_lb.public_cluster_nlb.dns_name
+}
