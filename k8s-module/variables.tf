@@ -47,8 +47,14 @@ variable "subnet_cidrs" {
   }
 }
 
-variable "nodes_instance_type" {
-  description = "Instance type for cluster EC2 instances"
+variable "worker_instance_type" {
+  description = "Instance type for cluster EC2 worker node instances"
+  type        = string
+  default     = "t3.micro"
+}
+
+variable "control_plane_instance_type" {
+  description = "Instance type for cluster EC2 master node instances"
   type        = string
   default     = "t3.micro"
 }
@@ -65,19 +71,18 @@ variable "cluster_ssh_key_path" {
 
 variable "my_public_ip" {
   type    = string
-  default = "109.242.91.141"
 }
 
 variable "hosted_zone_name" {
   description = "The name of the private DNS hosted zone"
   type        = string
-  default     = "kubeans.com"
+  default     = "cluster.internal"
 }
 
 variable "nlb_record_name" {
   description = "Name of the A record pointing to the NLB's ip"
   type        = string
-  default     = "cluster.kubeans.com"
+  default     = "api.cluster.internal"
 
   validation {
     condition = endswith(
@@ -85,4 +90,16 @@ variable "nlb_record_name" {
     )
     error_message = "This should be a subdomain of the hosted zone"
   }
+}
+
+variable "control_plane_node_name_prefix" {
+  description = "Hostname prefix for control plane nodes before index"
+  type        = string
+  default     = "controlplane"
+}
+
+variable "worker_node_name_prefix" {
+  description = "Hostname prefix for worker nodes before index"
+  type        = string
+  default     = "worker"
 }
